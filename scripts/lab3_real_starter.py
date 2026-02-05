@@ -29,9 +29,10 @@ class OdometryPublisher:
 
         ######### Your code starts here #########
         # TurtleBot3 Burger parameters from manual (https://emanual.robotis.com/docs/en/platform/turtlebot3/overview/)
-        self.TICK_TO_RAD =
-        self.wheel_radius =
-        self.wheel_separation =
+        self.TICK_TO_RAD = 2.0 * math.pi/4096.0
+        self.wheel_radius = 0.033
+        self.wheel_separation = 0.160
+        
         ######### Your code ends here #########
 
         self.current_time = rospy.Time.now()
@@ -56,7 +57,31 @@ class OdometryPublisher:
 
         ######### Your code starts here #########
         # add odometry equations to calculate robot's self.x, self.y, self.theta given encoder values
-
+        if dt <= 0.0:
+        	return
+        	
+        delta_left_ticks = self.left_encoder - self.last_left_encoder
+        delta_right_ticks = self.right_encoder - self.last_right_encoder
+        delta_left_rad = delta_left_ticks * self.TICK_TO_RAD
+        delta_right_rad = delta_right_ticks * self.TICK_TO_RAD
+        delta_left_dist = delta_left_rad * self.wheel_radius
+        delta_right_dist = delta_right_rad * self.wheel_radius
+        delta_s = (delta_right_dist + delta_left_dist) / 2.0
+        delta_theta = (delta_right_dist - delta_left_dist) / self.wheel_separation
+        delta_x = delta_s * math.cos(self.theta + delta_theta / 2.0)
+        delta_y = delta_s * math.sin(self.theta + delta_theta / 2.0)
+        self.x += delta_x
+        self.y += delta_y
+        self.theta += delta_theta
+        self.theta = math.atan2(math.sin(self.theta), math.cos(self.theta))
+        
+        #printing odometry
+        
+        print("Left encoder: ", self.left_encoder, "Right encoder: ", self.right_encoder)
+        print("x: ", self.x, " y: ",self.y, " theta: ",self.theta)
+        
+        self.last_left_encoder = self.left_encoder
+        self.last_right_encoder = self.right_encoder
         ######### Your code ends here #########
 
         odom_quat = tf.transformations.quaternion_from_euler(0, 0, self.theta)
